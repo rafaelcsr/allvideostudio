@@ -1,4 +1,4 @@
-<#
+﻿<#
   Implantação completa a partir do repositório (qualquer computador Windows com Node, Python/uv e Git).
   Pré-requisito: .env preenchido na raiz e logins feitos (docs/SETUP.md):
     modal token new            (Modal)

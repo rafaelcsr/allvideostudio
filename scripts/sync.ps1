@@ -1,4 +1,4 @@
-<#
+﻿<#
   Rotina de versionamento e sincronização com o repositório oficial
   https://github.com/rafaelcsr/allvideostudio  (fonte oficial do código)
 
@@ -22,20 +22,20 @@ $env:UV_NATIVE_TLS = "1"
 $env:NODE_OPTIONS = "--use-system-ca"
 
 function Step($t) { Write-Host "==> $t" -ForegroundColor Cyan }
-function Git { & git @args; if ($LASTEXITCODE -ne 0) { throw "git $($args -join ' ') falhou ($LASTEXITCODE)" } }
+function Invoke-Git { & git.exe @args; if ($LASTEXITCODE -ne 0) { throw "git $($args -join ' ') falhou ($LASTEXITCODE)" } }
 
 Step "Trava anti-segredos (core.hooksPath)"
-Git config core.hooksPath scripts/hooks
+Invoke-Git config core.hooksPath scripts/hooks
 
 $branch = (git rev-parse --abbrev-ref HEAD).Trim()
 if ($branch -ne "main") { Write-Host "Atenção: branch atual é '$branch' (oficial: main)" -ForegroundColor Yellow }
 
 Step "Buscando o remoto"
-Git fetch origin --prune
+Invoke-Git fetch origin --prune
 $remoteHasMain = (git ls-remote --heads origin main) -ne $null
 
 if ($PullOnly) {
-  if ($remoteHasMain) { Git pull --rebase --autostash origin main }
+  if ($remoteHasMain) { Invoke-Git pull --rebase --autostash origin main }
   Write-Host "Atualizado com o remoto." -ForegroundColor Green
   exit 0
 }
@@ -58,9 +58,9 @@ $dirty = git status --porcelain
 if ($dirty) {
   if (-not $Message) { throw "Há alterações; informe -Message `"tipo: descrição`"" }
   Step "Commit"
-  Git add -A
+  Invoke-Git add -A
   git status --short
-  Git commit -m $Message
+  Invoke-Git commit -m $Message
 }
 
 if ($remoteHasMain) {
@@ -70,7 +70,7 @@ if ($remoteHasMain) {
 }
 
 Step "Push"
-Git push -u origin main
+Invoke-Git push -u origin main
 $local = (git rev-parse HEAD).Trim(); $remote = (git rev-parse origin/main).Trim()
 if ($local -eq $remote) { Write-Host "Sincronizado: main = origin/main = $($local.Substring(0,7))" -ForegroundColor Green }
 else { throw "Divergência após push: local $local vs remoto $remote" }

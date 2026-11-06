@@ -5,6 +5,26 @@ import os
 from dataclasses import dataclass, field
 
 
+def _env(*names: str) -> str:
+    """First non-empty variable among `names` (new name first, legacy aliases after)."""
+    for n in names:
+        v = os.environ.get(n, "").strip()
+        if v:
+            return v
+    return ""
+
+
+def supabase_headers(key: str) -> dict[str, str]:
+    """Headers for Supabase REST/Auth calls made *as the project* (not as a user).
+
+    New keys (sb_publishable_/sb_secret_) go only in `apikey`; legacy JWT keys
+    (anon/service_role) must also be sent as the bearer token."""
+    h = {"apikey": key}
+    if key.startswith("eyJ"):
+        h["Authorization"] = f"Bearer {key}"
+    return h
+
+
 def _f(name: str, default: float) -> float:
     try:
         return float(os.environ.get(name, default))
@@ -15,8 +35,10 @@ def _f(name: str, default: float) -> float:
 @dataclass(frozen=True)
 class Settings:
     supabase_url: str = field(default_factory=lambda: os.environ.get("SUPABASE_URL", "").rstrip("/"))
-    supabase_anon_key: str = field(default_factory=lambda: os.environ.get("SUPABASE_ANON_KEY", ""))
-    supabase_service_key: str = field(default_factory=lambda: os.environ.get("SUPABASE_SERVICE_ROLE_KEY", ""))
+    # public key (safe for browsers): sb_publishable_… or legacy anon JWT
+    supabase_anon_key: str = field(default_factory=lambda: _env("SUPABASE_PUBLISHABLE_KEY", "SUPABASE_ANON_KEY"))
+    # privileged key (server only, bypasses RLS): sb_secret_… or legacy service_role JWT
+    supabase_service_key: str = field(default_factory=lambda: _env("SUPABASE_SECRET_KEY", "SUPABASE_SERVICE_ROLE_KEY"))
     r2_account_id: str = field(default_factory=lambda: os.environ.get("R2_ACCOUNT_ID", ""))
     r2_access_key: str = field(default_factory=lambda: os.environ.get("R2_ACCESS_KEY_ID", ""))
     r2_secret_key: str = field(default_factory=lambda: os.environ.get("R2_SECRET_ACCESS_KEY", ""))
@@ -50,8 +72,8 @@ class Settings:
     def missing(self) -> list[str]:
         req = {
             "SUPABASE_URL": self.supabase_url,
-            "SUPABASE_ANON_KEY": self.supabase_anon_key,
-            "SUPABASE_SERVICE_ROLE_KEY": self.supabase_service_key,
+            "SUPABASE_PUBLISHABLE_KEY": self.supabase_anon_key,
+            "SUPABASE_SECRET_KEY": self.supabase_service_key,
             "R2_ACCOUNT_ID": self.r2_account_id,
             "R2_ACCESS_KEY_ID": self.r2_access_key,
             "R2_SECRET_ACCESS_KEY": self.r2_secret_key,

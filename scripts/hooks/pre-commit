@@ -21,7 +21,7 @@ for f in $files; do
   fi
 done
 
-pattern='sk-ant-[A-Za-z0-9_-]{20,}|eyJhbGciOi[A-Za-z0-9_-]{30,}\.[A-Za-z0-9_-]{30,}|AKIA[0-9A-Z]{16}|gh[pousr]_[A-Za-z0-9]{30,}|-----BEGIN [A-Z ]*PRIVATE KEY|(SERVICE_ROLE_KEY|SECRET_ACCESS_KEY|ANTHROPIC_API_KEY)=[^[:space:]<]{8,}'
+pattern='sb_secret_[A-Za-z0-9_-]{10,}|postgres(ql)?://[^:/@[:space:]]+:[^@[:space:]<[{$][^@[:space:]]{5,}@|sk-ant-[A-Za-z0-9_-]{20,}|eyJhbGciOi[A-Za-z0-9_-]{30,}\.[A-Za-z0-9_-]{30,}|AKIA[0-9A-Z]{16}|gh[pousr]_[A-Za-z0-9]{30,}|-----BEGIN [A-Z ]*PRIVATE KEY|(SERVICE_ROLE_KEY|SUPABASE_SECRET_KEY|SECRET_ACCESS_KEY|ANTHROPIC_API_KEY|SUPABASE_DB_URL)=[^[:space:]<]{8,}'
 hits=$(git diff --cached -U0 -- $files | grep '^+' | grep -E "$pattern")
 if [ -n "$hits" ]; then
   echo "BLOQUEADO: possível credencial no conteúdo:"

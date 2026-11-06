@@ -3,7 +3,7 @@
   Pré-requisito: .env preenchido na raiz e logins feitos (docs/SETUP.md):
     modal token new            (Modal)
     npx wrangler login         (Cloudflare)
-    npx supabase login         (Supabase CLI) + SUPABASE_PROJECT_REF no ambiente
+    (Supabase: só o .env — migrations via SUPABASE_DB_URL, ver docs/SUPABASE.md)
   Uso:  powershell -ExecutionPolicy Bypass -File scripts\deploy.ps1 [-Step all|secrets|worker|db|r2|web]
 #>
 param([ValidateSet("all", "secrets", "worker", "db", "r2", "web")][string]$Step = "all")
@@ -28,8 +28,15 @@ if (-not (Test-Path $py)) {
 $modal = "$root\services\worker\.venv\Scripts\modal.exe"
 
 if ($Step -in "all", "secrets") {
-  Write-Host "==> Secret do Modal (a partir do .env)" -ForegroundColor Cyan
-  & $modal secret create ai-video-studio --from-dotenv "$root\.env" --force
+  Write-Host "==> Secret do Modal (a partir do .env, sem a URL do banco)" -ForegroundColor Cyan
+  # Menor privilégio: o worker não precisa da conexão Postgres nem de valores de frontend.
+  $exclude = @("SUPABASE_DB_URL", "API_URL")
+  $tmp = Join-Path $env:TEMP ("avs-secret-" + [guid]::NewGuid().ToString("N") + ".env")
+  try {
+    $lines = foreach ($k in $cfg.Keys) { if ($k -notin $exclude -and $k -notlike "NEXT_PUBLIC_*" -and $cfg[$k]) { "$k=$($cfg[$k])" } }
+    [IO.File]::WriteAllLines($tmp, $lines)
+    & $modal secret create ai-video-studio --from-dotenv $tmp --force
+  } finally { Remove-Item $tmp -Force -ErrorAction SilentlyContinue }
 }
 
 if ($Step -in "all", "worker") {
@@ -40,11 +47,11 @@ if ($Step -in "all", "worker") {
 }
 
 if ($Step -in "all", "db") {
-  Write-Host "==> Migrações Supabase" -ForegroundColor Cyan
-  if (-not $env:SUPABASE_PROJECT_REF) { throw "Defina `$env:SUPABASE_PROJECT_REF (Project Settings > General > Reference ID)" }
-  Push-Location $root
-  npx supabase link --project-ref $env:SUPABASE_PROJECT_REF
-  npx supabase db push
+  Write-Host "==> Migrações Supabase (validação -> pendentes -> aplicar -> verificar)" -ForegroundColor Cyan
+  Push-Location "$root\services\worker"
+  & $py -m studio.supa check --live; if ($LASTEXITCODE -ne 0) { Pop-Location; throw "Configuração do Supabase inválida" }
+  & $py -m studio.supa migrate; if ($LASTEXITCODE -ne 0) { Pop-Location; throw "Migration falhou (revertida)" }
+  & $py -m studio.supa verify; if ($LASTEXITCODE -ne 0) { Pop-Location; throw "Verificação de segurança do banco falhou" }
   Pop-Location
 }
 
@@ -60,7 +67,7 @@ if ($Step -in "all", "web") {
   if (-not $cfg["API_URL"]) { throw "Adicione API_URL=<url do endpoint 'api' mostrada pelo modal deploy> ao .env" }
   Push-Location "$root\apps\web"
   $env:NEXT_PUBLIC_SUPABASE_URL = $cfg["SUPABASE_URL"]
-  $env:NEXT_PUBLIC_SUPABASE_ANON_KEY = $cfg["SUPABASE_ANON_KEY"]
+  $env:NEXT_PUBLIC_SUPABASE_PUBLISHABLE_KEY = $(if ($cfg["SUPABASE_PUBLISHABLE_KEY"]) { $cfg["SUPABASE_PUBLISHABLE_KEY"] } else { $cfg["SUPABASE_ANON_KEY"] })
   $env:NEXT_PUBLIC_API_URL = $cfg["API_URL"]
   npm ci
   npm run build

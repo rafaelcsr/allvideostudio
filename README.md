@@ -17,7 +17,7 @@ services/worker/     motor editorial + API (Python)  — studio/pipeline/*, moda
 supabase/migrations/ schema + RLS
 infra/               CORS do R2
 scripts/deploy.ps1   implantação reprodutível
-docs/                ARCHITECTURE · COSTS · SETUP · DECISIONS
+docs/                ARCHITECTURE · COSTS · SETUP · SUPABASE · VERSIONING · DECISIONS
 ```
 
 - Estilos: **Corporativo**, **Dinâmico**, **Cinematográfico** ou **Automático** (`studio/styles.py`).

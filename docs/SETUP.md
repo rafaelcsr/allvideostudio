@@ -6,7 +6,7 @@ Tudo é reconstruível a partir deste repositório + as credenciais abaixo. Nenh
 | # | Serviço | O que fazer | Vai para |
 |---|---|---|---|
 | 1 | **GitHub** | `gh auth login` | push do repositório |
-| 2 | **Supabase** | Criar projeto (região São Paulo). *Authentication → Sign In / Providers*: desative "Allow new users to sign up"; *Users → Add user* com seu e-mail e senha. *Settings → API*: copie URL, `anon` e `service_role` | `.env` |
+| 2 | **Supabase** | Siga [SUPABASE.md](SUPABASE.md): projeto Free em São Paulo, cadastro público desativado, seu usuário criado, chaves e `SUPABASE_DB_URL` no `.env` | `.env` |
 | 3 | **Cloudflare** | `npx wrangler login`. No painel, ative o R2 (exige cartão; free tier 10 GB). *R2 → Manage API tokens*: token **Object Read & Write** restrito ao bucket `ai-video-studio`. Copie Account ID, Access Key ID, Secret | `.env` |
 | 4 | **Modal** | Criar conta, `services\worker\.venv\Scripts\modal.exe token new`. Defina um spend limit em Settings | login local |
 | 5 | **Anthropic** | console.anthropic.com → API key; defina spend limit | `.env` |
@@ -15,7 +15,7 @@ Copie `.env.example` → `.env` e preencha. **Nunca** versione o `.env`.
 
 ## 2. Implantar
 ```powershell
-$env:SUPABASE_PROJECT_REF = "<ref do projeto>"
+cd services\worker; .venv\Scripts\python.exe -m studio.supa check --live; cd ..\..   # Supabase pronto?
 powershell -ExecutionPolicy Bypass -File scripts\deploy.ps1 -Step secrets
 powershell -ExecutionPolicy Bypass -File scripts\deploy.ps1 -Step worker   # anote a URL do endpoint "api"
 # adicione API_URL=<essa url> ao .env

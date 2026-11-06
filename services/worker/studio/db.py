@@ -7,7 +7,7 @@ from typing import Any, Protocol
 
 import httpx
 
-from studio.config import Settings
+from studio.config import Settings, supabase_headers
 
 
 def month_start() -> str:
@@ -33,8 +33,7 @@ class SupabaseDB:
         self.http = httpx.Client(
             timeout=30,
             headers={
-                "apikey": s.supabase_service_key,
-                "Authorization": f"Bearer {s.supabase_service_key}",
+                **supabase_headers(s.supabase_service_key),
                 "Content-Type": "application/json",
                 "Prefer": "return=representation",
             },

@@ -15,7 +15,8 @@ dependencies = [
 
 [project.optional-dependencies]
 transcribe = ["faster-whisper>=1.1"]
-dev = ["pytest>=8", "modal>=1.0"]
+ops = ["psycopg[binary]>=3.2"]
+dev = ["pytest>=8", "modal>=1.0", "psycopg[binary]>=3.2"]
 
 [build-system]
 requires = ["setuptools>=69"]
@@ -26,7 +27,9 @@ include = ["studio*"]
 
 [tool.pytest.ini_options]
 testpaths = ["tests"]
+addopts = "-m 'not live'"
 markers = [
   "ffmpeg: requires ffmpeg/ffprobe on PATH",
   "slow: long running (transcription)",
+  "live: real cloud integration (Supabase); run with -m live",
 ]

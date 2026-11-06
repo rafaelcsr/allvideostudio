@@ -5,7 +5,7 @@
 create extension if not exists pgcrypto;
 
 create or replace function public.touch_updated_at() returns trigger
-language plpgsql as $$
+language plpgsql set search_path = '' as $$
 begin
   new.updated_at = now();
   return new;
@@ -110,11 +110,19 @@ create policy "own renders" on public.renders for select using (user_id = (selec
 create policy "own usage" on public.usage_ledger for select using (user_id = (select auth.uid()));
 create policy "alerts for signed-in" on public.budget_alerts for select using ((select auth.uid()) is not null);
 
+-- Defesa em profundidade: além do RLS, as roles do navegador não têm privilégio de escrita.
+-- anon (não logado) não lê nada; authenticated só lê (filtrado pelas policies acima).
+revoke all on public.projects, public.jobs, public.renders, public.usage_ledger, public.budget_alerts from anon, authenticated;
+grant select on public.projects, public.jobs, public.renders, public.usage_ledger, public.budget_alerts to authenticated;
+revoke execute on function public.touch_updated_at() from public, anon, authenticated;
+
 -- monthly spend summary (respects RLS of the caller)
 create view public.monthly_spend with (security_invoker = true) as
   select date_trunc('month', created_at)::date as month, service,
          sum(cost_usd)::numeric(12,4) as cost_usd, count(*) as entries
   from public.usage_ledger group by 1, 2;
+revoke all on public.monthly_spend from anon, authenticated;
+grant select on public.monthly_spend to authenticated;
 
 -- realtime progress
 alter publication supabase_realtime add table public.jobs, public.renders, public.projects;

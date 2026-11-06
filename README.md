@@ -24,4 +24,6 @@ docs/                ARCHITECTURE · COSTS · SETUP · DECISIONS
 - Orçamento: teto mensal com bloqueio prévio, ledger por serviço e alertas — ver [docs/COSTS.md](docs/COSTS.md).
 - Implantação: [docs/SETUP.md](docs/SETUP.md).
 
+Repositório oficial: https://github.com/rafaelcsr/allvideostudio · versionamento e recuperação: [docs/VERSIONING.md](docs/VERSIONING.md)
+
 Testes: `cd services/worker && .venv\Scripts\python.exe -m pytest -q` (renderizações reais com FFmpeg).

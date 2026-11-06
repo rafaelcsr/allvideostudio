@@ -1,0 +1,33 @@
+#!/bin/sh
+# Trava de segurança: bloqueia commits com credenciais, .env, mídia ou arquivos grandes.
+# Ativada por: git config core.hooksPath scripts/hooks   (scripts/sync.ps1 faz isso)
+trap "" PIPE   # saída fechada (ex.: | head) não pode matar a trava e liberar o commit
+exec 1>&2
+fail=0
+files=$(git diff --cached --name-only --diff-filter=ACM)
+[ -z "$files" ] && exit 0
+
+for f in $files; do
+  case "$f" in
+    *.env.example) ;;
+    .env|*/.env|.env.*|*/.env.*|*.pem|*.key|*.p12|*.pfx|.modal.toml|.dev.vars)
+      echo "BLOQUEADO: arquivo sensível '$f'"; fail=1 ;;
+    *.mp4|*.mov|*.mkv|*.webm|*.avi|*.wav|*.flac|*.mp3|*.m4a|*.onnx|*.bin|*.safetensors)
+      echo "BLOQUEADO: mídia/modelo '$f' (use o R2)"; fail=1 ;;
+  esac
+  if [ -f "$f" ]; then
+    size=$(wc -c < "$f")
+    if [ "$size" -gt 5000000 ]; then echo "BLOQUEADO: '$f' tem $size bytes (> 5 MB)"; fail=1; fi
+  fi
+done
+
+pattern='sk-ant-[A-Za-z0-9_-]{20,}|eyJhbGciOi[A-Za-z0-9_-]{30,}\.[A-Za-z0-9_-]{30,}|AKIA[0-9A-Z]{16}|gh[pousr]_[A-Za-z0-9]{30,}|-----BEGIN [A-Z ]*PRIVATE KEY|(SERVICE_ROLE_KEY|SECRET_ACCESS_KEY|ANTHROPIC_API_KEY)=[^[:space:]<]{8,}'
+hits=$(git diff --cached -U0 -- $files | grep '^+' | grep -E "$pattern")
+if [ -n "$hits" ]; then
+  echo "BLOQUEADO: possível credencial no conteúdo:"
+  echo "$hits" | cut -c1-120
+  fail=1
+fi
+
+[ $fail -ne 0 ] && echo "Commit cancelado. Remova os itens acima (git restore --staged <arquivo>)."
+exit $fail
